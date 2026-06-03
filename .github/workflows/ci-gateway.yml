@@ -1,4 +1,4 @@
-name: CI Full
+name: CI Gateway
 on:
   workflow_dispatch:   # manual only — disabled from auto-running
 jobs:
