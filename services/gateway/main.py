@@ -120,7 +120,15 @@ async def observability_middleware(request: Request, call_next):
 async def health():
     return {"status": "ok", "service": "gateway", "version": app.version}
 
-
+@app.get("/")
+async def root():
+    return {
+        "service": "LLM Platform Gateway",
+        "version": "1.0.0",
+        "status": "running",
+        "docs": "/docs",
+        "health": "/health"
+    }
 # ── Chat completions endpoint ─────────────────────────────────────────────────
 @app.post("/v1/chat/completions")
 async def chat_completions(
