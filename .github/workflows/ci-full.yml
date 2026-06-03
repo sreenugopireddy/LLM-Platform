@@ -1,0 +1,112 @@
+name: CI — Gateway
+
+on:
+  push:
+    paths:
+      - "services/gateway/**"
+      - "shared/**"
+      - "tests/gateway/**"
+  pull_request:
+    paths:
+      - "services/gateway/**"
+      - "shared/**"
+
+jobs:
+  # ── 1. Lint + type-check ─────────────────────────────────────────────────
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ruff mypy pydantic pydantic-settings pyjwt semver
+      - run: ruff check services/gateway/ shared/
+      - run: mypy services/gateway/ --ignore-missing-imports
+
+  # ── 2. Unit + integration tests ──────────────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r services/gateway/requirements.txt
+      - run: pytest tests/gateway/ -v --tb=short
+        env:
+          JWT_SECRET: ci-test-secret
+          REDIS_URL: redis://localhost:6379/0
+          INFERENCE_SERVICE_URL: http://mock-inference:8001
+
+  # ── 3. Eval quality gate (blocks deploy if relevance < 0.85) ─────────────
+  eval-gate:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install ragas openai azure-cosmos
+      - name: Run evals for changed prompt versions
+        env:
+          COSMOS_CONN_STR: ${{ secrets.COSMOS_CONN_STR }}
+          AZURE_OAI_KEY:   ${{ secrets.AZURE_OAI_KEY }}
+          AZURE_OAI_BASE:  ${{ secrets.AZURE_OAI_BASE }}
+        run: |
+          python evals/run_evals.py customer-support 2.1.0
+          # Exits 1 if relevance < 0.85 — this blocks the deploy job
+
+  # ── 4. Build + push Docker image ─────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    needs: [eval-gate]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: services/gateway
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/llm-platform-gateway:latest
+            ghcr.io/${{ github.repository_owner }}/llm-platform-gateway:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 5. Deploy via Argo Rollouts ───────────────────────────────────────────
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - uses: azure/aks-set-context@v3
+        with:
+          resource-group: llm-platform-rg
+          cluster-name: llm-platform-aks
+      - name: Update rollout image
+        run: |
+          kubectl argo rollouts set image llm-gateway \
+            gateway=ghcr.io/${{ github.repository_owner }}/llm-platform-gateway:${{ github.sha }}
+      - name: Wait for rollout (auto-aborts on p95 spike)
+        run: |
+          kubectl argo rollouts status llm-gateway --timeout=10m

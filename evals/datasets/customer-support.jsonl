@@ -1,0 +1,5 @@
+{"input": "How do I reset my password?", "expected_output": "reset password", "ground_truth": "Click Forgot Password on the login page."}
+{"input": "What are your business hours?", "expected_output": "business hours", "ground_truth": "Monday through Friday 9am to 5pm EST."}
+{"input": "How do I cancel my subscription?", "expected_output": "cancel subscription", "ground_truth": "Go to Account Settings then Billing to cancel."}
+{"input": "I was charged twice", "expected_output": "refund charge", "ground_truth": "Contact billing support for a refund."}
+{"input": "How do I update my email?", "expected_output": "update email", "ground_truth": "Go to Account Settings then Profile to update email."}
