@@ -3,6 +3,9 @@ param location string = 'eastus'
 param appName string = 'llm-platform'
 param containerTag string = 'latest'
 param ghcrOrg string = 'sreenugopireddy'
+param azureOaiPaygEndpoint string = ''
+param azureOaiPaygKey string = ''
+param jwtSecret string = 'my-super-secret-key-change-in-production-32chars'
 
 // ── Log Analytics ─────────────────────────────────────────────────────────────
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
@@ -72,14 +75,6 @@ resource evalContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/conta
   }
 }
 
-// ── Service Bus ───────────────────────────────────────────────────────────────
-resource serviceBus 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
-  name: '${appName}-sb'
-  location: location
-  sku: { name: 'Basic', tier: 'Basic' }
-}
-
-// ── Shared secrets ────────────────────────────────────────────────────────────
 var cosmosConnStr = cosmos.listConnectionStrings().connectionStrings[0].connectionString
 
 // ── Inference Container App (internal) ───────────────────────────────────────
@@ -96,13 +91,13 @@ resource inferenceApp 'Microsoft.App/containerApps@2023-05-01' = {
       }
       secrets: [
         { name: 'cosmos-conn-str', value: cosmosConnStr }
-        { name: 'azure-oai-payg-key', value: '' }
+        { name: 'azure-oai-payg-key', value: empty(azureOaiPaygKey) ? 'placeholder' : azureOaiPaygKey }
       ]
     }
     template: {
       containers: [{
         name: 'inference'
-        image: 'ghcr.io/${ghcrOrg}/llm-platform-inference:${containerTag}'
+        image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
         resources: {
           cpu: json('0.5')
           memory: '1Gi'
@@ -110,7 +105,9 @@ resource inferenceApp 'Microsoft.App/containerApps@2023-05-01' = {
         env: [
           { name: 'COSMOS_CONN_STR', secretRef: 'cosmos-conn-str' }
           { name: 'AZURE_OAI_PAYG_KEY', secretRef: 'azure-oai-payg-key' }
+          { name: 'AZURE_OAI_PAYG_ENDPOINT', value: azureOaiPaygEndpoint }
           { name: 'AZURE_OAI_API_VERSION', value: '2024-10-21' }
+          { name: 'MODEL_DEPLOYMENT_MAP', value: '{"gpt-4o-mini":"gpt-4.1-mini"}' }
         ]
       }]
       scale: { minReplicas: 0, maxReplicas: 10 }
@@ -137,7 +134,7 @@ resource registryApp 'Microsoft.App/containerApps@2023-05-01' = {
     template: {
       containers: [{
         name: 'registry'
-        image: 'ghcr.io/${ghcrOrg}/llm-platform-registry:${containerTag}'
+        image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
         resources: {
           cpu: json('0.25')
           memory: '0.5Gi'
@@ -164,14 +161,13 @@ resource gatewayApp 'Microsoft.App/containerApps@2023-05-01' = {
         transport: 'http'
       }
       secrets: [
-        { name: 'cosmos-conn-str', value: cosmosConnStr }
-        { name: 'jwt-secret', value: 'my-super-secret-key-change-in-production-32chars' }
+        { name: 'jwt-secret', value: jwtSecret }
       ]
     }
     template: {
       containers: [{
         name: 'gateway'
-        image: 'ghcr.io/${ghcrOrg}/llm-platform-gateway:${containerTag}'
+        image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
         resources: {
           cpu: json('0.25')
           memory: '0.5Gi'
@@ -192,3 +188,5 @@ resource gatewayApp 'Microsoft.App/containerApps@2023-05-01' = {
 // ── Outputs ───────────────────────────────────────────────────────────────────
 output gatewayUrl string = 'https://${gatewayApp.properties.configuration.ingress.fqdn}'
 output cosmosEndpoint string = cosmos.properties.documentEndpoint
+output inferenceInternalUrl string = 'https://${inferenceApp.properties.configuration.ingress.fqdn}'
+output registryInternalUrl string = 'https://${registryApp.properties.configuration.ingress.fqdn}'
