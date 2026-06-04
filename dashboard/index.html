@@ -1,497 +1,562 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LLM Platform Dashboard</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;
-      --border:#2a2d3e;--text:#e8eaf6;--text2:#9fa3c0;--text3:#6b7099;
-      --blue:#4f8ef7;--green:#4caf82;--amber:#f0a832;--red:#e05555;
-      --purple:#9c6cff;
-    }
-    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
-    button{cursor:pointer;border:none;border-radius:8px;font-size:13px;padding:8px 16px;transition:opacity .15s}
-    button:hover{opacity:.85}
-    input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 12px;outline:none;width:100%}
-    input:focus,select:focus,textarea:focus{border-color:var(--blue)}
-    .btn-primary{background:var(--blue);color:#fff}
-    .btn-secondary{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
-    .btn-green{background:var(--green);color:#fff}
-    .btn-danger{background:var(--red);color:#fff}
-    ::-webkit-scrollbar{width:4px;height:4px}
-    ::-webkit-scrollbar-track{background:var(--bg)}
-    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>LLM Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b12;
+  --bg1:#0d1220;
+  --bg2:#111827;
+  --bg3:#1a2236;
+  --border:#1e2d47;
+  --border2:#243452;
+  --text:#e2eaf8;
+  --text2:#7890b8;
+  --text3:#3d5278;
+  --accent:#3b82f6;
+  --accent2:#60a5fa;
+  --green:#10b981;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --purple:#8b5cf6;
+  --cyan:#06b6d4;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Syne',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 20% -10%,rgba(59,130,246,.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 110%,rgba(139,92,246,.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* inputs */
+input,select,textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;padding:10px 14px;outline:none;transition:border-color .2s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder{color:var(--text3)}
+select option{background:var(--bg2)}
+
+/* buttons */
+button{cursor:pointer;border:none;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:500;padding:9px 18px;transition:all .15s;position:relative;overflow:hidden}
+button::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .15s}
+button:hover::after{background:rgba(255,255,255,.06)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 20px rgba(59,130,246,.3)}
+.btn-primary:hover{box-shadow:0 0 28px rgba(59,130,246,.45)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+
+/* animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.fade-up{animation:fadeUp .4s ease both}
+.fade-up-2{animation:fadeUp .4s .08s ease both}
+.fade-up-3{animation:fadeUp .4s .16s ease both}
+.fade-up-4{animation:fadeUp .4s .24s ease both}
+
+/* layout */
+#app{position:relative;z-index:1}
+.screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+
+/* login */
+.login-wrap{width:100%;max-width:420px}
+.login-logo{text-align:center;margin-bottom:40px}
+.login-logo .wordmark{font-size:28px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(135deg,var(--text) 0%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-logo .sub{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.15em;text-transform:uppercase;margin-top:6px}
+.card{background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:28px}
+.card-title{font-size:14px;font-weight:600;color:var(--text2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:20px}
+.field{margin-bottom:16px}
+.field label{display:block;font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
+.login-hint{margin-top:20px;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.12);border-radius:10px;padding:14px 16px}
+.login-hint-title{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.login-hint-key{font-family:var(--mono);font-size:13px;color:var(--accent2)}
+.error-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;font-family:var(--mono);font-size:12px;color:var(--red);margin-bottom:16px}
+
+/* header */
+header{position:sticky;top:0;z-index:200;background:rgba(8,11,18,.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.header-left{display:flex;align-items:center;gap:20px}
+.logo{font-size:15px;font-weight:800;letter-spacing:-.3px}
+.logo span{color:var(--accent2)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+.nav{display:flex;gap:2px}
+.nav-btn{background:transparent;border:none;color:var(--text3);font-size:13px;font-weight:500;padding:6px 14px;border-radius:6px;transition:all .15s}
+.nav-btn:hover{color:var(--text2);background:var(--bg3)}
+.nav-btn.active{color:var(--text);background:var(--bg3)}
+.nav-btn::after{display:none}
+.header-right{display:flex;align-items:center;gap:12px}
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 12px}
+.user-avatar{width:22px;height:22px;background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.user-name{font-size:12px;font-weight:500}
+.user-team{font-family:var(--mono);font-size:10px;color:var(--text3)}
+
+/* main */
+main{padding:28px;max-width:1000px;margin:0 auto}
+
+/* metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.metric{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden}
+.metric::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(59,130,246,.03) 0%,transparent 60%)}
+.metric-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.metric-value{font-size:24px;font-weight:700;line-height:1}
+.metric-sub{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:6px}
+.metric-badge{position:absolute;top:14px;right:14px;font-size:18px;opacity:.4}
+
+/* section card */
+.section-card{background:var(--bg1);border:1px solid var(--border);border-radius:16px;margin-bottom:16px;overflow:hidden}
+.section-header{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.section-title{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.section-title .icon{opacity:.6}
+.section-body{padding:24px}
+
+/* chat */
+.chat-messages{min-height:280px;max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:4px}
+.msg-wrap{display:flex}
+.msg-wrap.user{justify-content:flex-end}
+.bubble{max-width:72%;padding:12px 16px;border-radius:14px;font-size:14px;line-height:1.6}
+.bubble.user{background:linear-gradient(135deg,var(--accent),#2563eb);color:#fff;border-bottom-right-radius:4px}
+.bubble.assistant{background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-bottom-left-radius:4px}
+.bubble.system{background:transparent;color:var(--text3);font-family:var(--mono);font-size:12px;text-align:center;align-self:center;border:none;padding:6px}
+.bubble.error{background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.typing{display:flex;align-items:center;gap:5px;padding:14px 18px;background:var(--bg3);border:1px solid var(--border2);border-radius:14px;border-bottom-left-radius:4px;width:fit-content}
+.typing span{width:5px;height:5px;border-radius:50%;background:var(--text3);animation:pulse 1.2s ease infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+.chat-controls{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.chat-input-row{display:flex;gap:8px;margin-top:12px}
+.chat-meta{font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:8px;display:flex;gap:16px}
+.chat-meta span{display:flex;align-items:center;gap:4px}
+
+/* service rows */
+.service-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.service-row:last-child{border:none}
+.service-name{font-size:14px;font-weight:500}
+.service-desc{font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:3px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;font-weight:500;padding:3px 8px;border-radius:5px;letter-spacing:.05em;text-transform:uppercase}
+.badge-green{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.badge-blue{background:rgba(59,130,246,.1);color:var(--accent2);border:1px solid rgba(59,130,246,.2)}
+.badge-gray{background:var(--bg3);color:var(--text3);border:1px solid var(--border2)}
+.badge-amber{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.badge-purple{background:rgba(139,92,246,.1);color:var(--purple);border:1px solid rgba(139,92,246,.2)}
+.badge-red{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+
+/* code block */
+.code-block{background:var(--bg);border:1px solid var(--border2);border-radius:10px;padding:16px;font-family:var(--mono);font-size:12px;color:var(--text2);overflow-x:auto;line-height:1.7;white-space:pre;position:relative}
+.code-copy{position:absolute;top:10px;right:10px;font-size:11px;padding:4px 10px}
+
+/* endpoint table */
+.ep-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.ep-row:last-child{border:none}
+.ep-left{display:flex;align-items:center;gap:10px}
+.method{font-family:var(--mono);font-size:11px;font-weight:600;padding:3px 7px;border-radius:4px;min-width:42px;text-align:center}
+.method-post{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.method-get{background:rgba(59,130,246,.1);color:var(--accent2);border:1px solid rgba(59,130,246,.2)}
+.ep-path{font-family:var(--mono);font-size:13px;color:var(--text)}
+.ep-desc{font-size:12px;color:var(--text3)}
+
+/* highlight cards */
+.highlights{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.highlight{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:12px}
+.highlight-icon{font-size:20px;flex-shrink:0;margin-top:2px}
+.highlight-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.highlight-desc{font-family:var(--mono);font-size:11px;color:var(--text3);line-height:1.6}
+
+/* tabs in chat */
+.model-pill{background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
+.model-pill.active,.model-pill:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.model-pill::after{display:none}
+
+@media(max-width:700px){
+  .metrics{grid-template-columns:1fr 1fr}
+  .highlights{grid-template-columns:1fr}
+  .nav-btn span{display:none}
+  header{padding:0 16px}
+  main{padding:16px}
+}
+</style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-const { useState, useEffect, useRef, useCallback } = React;
+<div id="app"></div>
 
+<script>
 const GATEWAY = "https://llm-platform-gateway.greentree-67d78498.eastus.azurecontainerapps.io";
+let state = { token: null, username: "", teamId: "", tab: "overview", messages: [], model: "gpt-4o-mini", loading: false, health: null, stats: null, requests: 0, cost: 0 };
 
-// ── API helpers ───────────────────────────────────────────────────────────────
-const api = {
-  async getToken(username, teamId, roles, apiKey) {
-    const r = await fetch(`${GATEWAY}/auth/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, team_id: teamId, roles, api_key: apiKey }),
-    });
-    return r.json();
-  },
-  async chat(token, messages, model) {
-    const r = await fetch(`${GATEWAY}/v1/chat/completions`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ messages, model }),
-    });
-    return r.json();
-  },
-  async health() {
-    const r = await fetch(`${GATEWAY}/health`);
-    return r.json();
-  },
-};
+function $(id){ return document.getElementById(id) }
 
-// ── Components ────────────────────────────────────────────────────────────────
-
-function Badge({ color, children }) {
-  const colors = {
-    green: { bg: "#1a2e22", color: "#4caf82" },
-    red:   { bg: "#2e1a1a", color: "#e05555" },
-    blue:  { bg: "#1a2038", color: "#4f8ef7" },
-    amber: { bg: "#2e2510", color: "#f0a832" },
-    gray:  { bg: "#1e2030", color: "#9fa3c0" },
-  };
-  const s = colors[color] || colors.gray;
-  return (
-    <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 600,
-      padding: "2px 8px", borderRadius: 6, whiteSpace: "nowrap" }}>
-      {children}
-    </span>
-  );
-}
-
-function Card({ children, style }) {
-  return (
-    <div style={{ background: "var(--bg2)", border: "1px solid var(--border)",
-      borderRadius: 12, padding: "20px", ...style }}>
-      {children}
-    </div>
-  );
-}
-
-function MetricCard({ label, value, sub, color }) {
-  return (
-    <div style={{ background: "var(--bg2)", border: "1px solid var(--border)",
-      borderRadius: 12, padding: "16px 20px" }}>
-      <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 600, color: color || "var(--text)" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>{sub}</div>}
-    </div>
-  );
+function render(){
+  if(!state.token){ renderLogin(); return; }
+  renderApp();
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
-function LoginScreen({ onLogin }) {
-  const [form, setForm] = useState({ username: "user_001", teamId: "team_acme", apiKey: "" });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const roles = ["premium"];
-
-  async function handleLogin(e) {
-    e.preventDefault();
-    setLoading(true); setError("");
-    try {
-      const data = await api.getToken(form.username, form.teamId, roles, form.apiKey);
-      if (data.access_token) {
-        onLogin(data.access_token, form.username, form.teamId);
-      } else {
-        setError(data.detail?.error || "Invalid API key");
-      }
-    } catch (e) {
-      setError("Connection failed — is the gateway running?");
-    }
-    setLoading(false);
-  }
-
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>⚡</div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>LLM Platform</h1>
-          <p style={{ color: "var(--text2)", fontSize: 14 }}>Sign in to access the platform</p>
+function renderLogin(){
+  $("app").innerHTML = `
+  <div class="screen">
+    <div class="login-wrap">
+      <div class="login-logo fade-up">
+        <div class="wordmark">LLM <span>Platform</span></div>
+        <div class="sub">Production-grade · Azure deployed</div>
+      </div>
+      <div class="card fade-up-2">
+        <div class="card-title">Sign in</div>
+        <div id="login-error"></div>
+        <div class="field"><label>Username</label><input id="li-user" value="user_001" placeholder="user_001"/></div>
+        <div class="field"><label>Team ID</label><input id="li-team" value="team_acme" placeholder="team_acme"/></div>
+        <div class="field"><label>Platform API Key</label><input id="li-key" type="password" placeholder="Enter your platform API key"/></div>
+        <button class="btn-primary" style="width:100%;padding:12px;font-size:14px;margin-top:4px" onclick="doLogin()">
+          Sign in →
+        </button>
+        <div class="login-hint">
+          <div class="login-hint-title">Default key</div>
+          <div class="login-hint-key" onclick="$('li-key').value=this.textContent" style="cursor:pointer" title="Click to fill">llm-platform-key-2024</div>
         </div>
-        <Card>
-          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div>
-              <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>USERNAME</label>
-              <input value={form.username} onChange={e => setForm(f => ({...f, username: e.target.value}))} placeholder="user_001" required />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>TEAM ID</label>
-              <input value={form.teamId} onChange={e => setForm(f => ({...f, teamId: e.target.value}))} placeholder="team_acme" required />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>PLATFORM API KEY</label>
-              <input type="password" value={form.apiKey} onChange={e => setForm(f => ({...f, apiKey: e.target.value}))} placeholder="Your platform API key" required />
-            </div>
-            {error && <div style={{ background: "#2e1a1a", color: "var(--red)", fontSize: 13, padding: "10px 14px", borderRadius: 8 }}>{error}</div>}
-            <button className="btn-primary" type="submit" disabled={loading} style={{ padding: "12px", fontSize: 15, marginTop: 4 }}>
-              {loading ? "Signing in..." : "Sign in →"}
-            </button>
-          </form>
-          <div style={{ marginTop: 20, padding: "14px", background: "var(--bg3)", borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 6 }}>Default API key (set in Azure):</div>
-            <code style={{ fontSize: 12, color: "var(--amber)" }}>llm-platform-key-2024</code>
-          </div>
-        </Card>
       </div>
     </div>
-  );
+  </div>`;
+  $("li-key").addEventListener("keydown", e => e.key==="Enter" && doLogin());
 }
 
-// ── CHAT ──────────────────────────────────────────────────────────────────────
-function ChatTab({ token }) {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [model, setModel] = useState("gpt-4o-mini");
-  const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState(null);
-  const bottomRef = useRef(null);
+async function doLogin(){
+  const u=$("li-user").value.trim(), t=$("li-team").value.trim(), k=$("li-key").value.trim();
+  if(!u||!t||!k){showLoginError("All fields required"); return;}
+  try{
+    const r = await fetch(`${GATEWAY}/auth/token`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,team_id:t,roles:["premium"],api_key:k})});
+    const d = await r.json();
+    if(d.access_token){ state.token=d.access_token; state.username=u; state.teamId=t; render(); checkHealth(); }
+    else showLoginError(d.detail?.error || "Invalid API key");
+  }catch(e){ showLoginError("Could not reach gateway — check your connection"); }
+}
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+function showLoginError(msg){
+  $("login-error").innerHTML = `<div class="error-box">${msg}</div>`;
+}
 
-  async function send() {
-    if (!input.trim() || loading) return;
-    const userMsg = { role: "user", content: input };
-    setMessages(m => [...m, userMsg]);
-    setInput("");
-    setLoading(true);
-    try {
-      const history = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
-      const data = await api.chat(token, history, model);
-      if (data.choices?.[0]?.message) {
-        setMessages(m => [...m, data.choices[0].message]);
-        setStats(data.usage);
-      } else {
-        setMessages(m => [...m, { role: "error", content: JSON.stringify(data.detail || data) }]);
-      }
-    } catch (e) {
-      setMessages(m => [...m, { role: "error", content: e.message }]);
-    }
-    setLoading(false);
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 180px)", gap: 16 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <select value={model} onChange={e => setModel(e.target.value)} style={{ width: "auto" }}>
-          <option value="gpt-4o-mini">gpt-4o-mini</option>
-          <option value="gpt-4o">gpt-4o</option>
-          <option value="gpt-35-turbo">gpt-35-turbo</option>
-        </select>
-        <button className="btn-secondary" onClick={() => setMessages([])} style={{ whiteSpace: "nowrap" }}>Clear chat</button>
-        {stats && (
-          <span style={{ fontSize: 12, color: "var(--text3)" }}>
-            {stats.total_tokens} tokens · ~${((stats.prompt_tokens * 0.00015 + stats.completion_tokens * 0.0006) / 1000).toFixed(6)}
-          </span>
-        )}
+// ── APP SHELL ─────────────────────────────────────────────────────────────────
+function renderApp(){
+  const tabs = [{id:"overview",label:"Overview"},{id:"chat",label:"Chat"},{id:"api",label:"API Docs"}];
+  $("app").innerHTML = `
+  <header>
+    <div class="header-left">
+      <div class="logo">LLM <span>Platform</span></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="status-dot" id="status-dot"></div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--text3)" id="status-text">connecting</span>
       </div>
-
-      <Card style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12, padding: "20px" }}>
-        {messages.length === 0 && (
-          <div style={{ textAlign: "center", color: "var(--text3)", marginTop: "auto", marginBottom: "auto" }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>💬</div>
-            <div style={{ fontSize: 14 }}>Start a conversation with your deployed LLM platform</div>
-            <div style={{ fontSize: 12, marginTop: 8, color: "var(--text3)" }}>Model: {model} · Gateway: Azure Container Apps</div>
-          </div>
-        )}
-        {messages.map((m, i) => (
-          <div key={i} style={{
-            display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start"
-          }}>
-            <div style={{
-              maxWidth: "75%", padding: "12px 16px", borderRadius: 12, fontSize: 14, lineHeight: 1.6,
-              background: m.role === "user" ? "var(--blue)" : m.role === "error" ? "#2e1a1a" : "var(--bg3)",
-              color: m.role === "error" ? "var(--red)" : "var(--text)",
-              borderBottomRightRadius: m.role === "user" ? 4 : 12,
-              borderBottomLeftRadius: m.role === "assistant" ? 4 : 12,
-            }}>
-              {m.content}
-            </div>
-          </div>
-        ))}
-        {loading && (
-          <div style={{ display: "flex" }}>
-            <div style={{ background: "var(--bg3)", padding: "12px 16px", borderRadius: 12, fontSize: 13, color: "var(--text3)" }}>
-              Thinking...
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </Card>
-
-      <div style={{ display: "flex", gap: 8 }}>
-        <input value={input} onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
-          placeholder="Type a message and press Enter..." />
-        <button className="btn-primary" onClick={send} disabled={loading} style={{ whiteSpace: "nowrap", padding: "8px 20px" }}>
-          Send ↑
-        </button>
-      </div>
+      <nav class="nav">
+        ${tabs.map(t=>`<button class="nav-btn ${state.tab===t.id?'active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`).join('')}
+      </nav>
     </div>
-  );
+    <div class="header-right">
+      <div class="user-chip">
+        <div class="user-avatar">${state.username[0]?.toUpperCase()}</div>
+        <div><div class="user-name">${state.username}</div><div class="user-team">${state.teamId}</div></div>
+      </div>
+      <button class="btn-ghost" style="font-size:12px;padding:6px 12px" onclick="logout()">Sign out</button>
+    </div>
+  </header>
+  <main id="main-content"></main>`;
+  renderTab();
+}
+
+function switchTab(t){ state.tab=t; renderApp(); if(t==="overview")checkHealth(); }
+function logout(){ state.token=null; state.messages=[]; render(); }
+
+function renderTab(){
+  const c=$("main-content");
+  if(state.tab==="overview") c.innerHTML=renderOverview();
+  else if(state.tab==="chat") c.innerHTML=renderChat();
+  else if(state.tab==="api") c.innerHTML=renderApi();
+  attachHandlers();
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────────────────────────
-function OverviewTab({ token, username, teamId }) {
-  const [health, setHealth] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  async function refresh() {
-    setLoading(true);
-    try { const h = await api.health(); setHealth(h); } catch(e) { setHealth({ status: "error" }); }
-    setLoading(false);
-  }
-
-  useEffect(() => { refresh(); }, []);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-        <MetricCard label="Gateway" value={health?.status === "ok" ? "● Online" : "● Offline"}
-          color={health?.status === "ok" ? "var(--green)" : "var(--red)"}
-          sub="Azure Container Apps" />
-        <MetricCard label="Signed in as" value={username} sub={`Team: ${teamId}`} color="var(--blue)" />
-        <MetricCard label="Model" value="gpt-4.1-mini" sub="Azure OpenAI PAYG" color="var(--purple)" />
-        <MetricCard label="Auth" value="JWT HS256" sub="24h token · RBAC enabled" />
-      </div>
-
-      <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600 }}>Platform services</h3>
-          <button className="btn-secondary" onClick={refresh} style={{ fontSize: 12 }}>
-            {loading ? "Checking..." : "↻ Refresh"}
-          </button>
-        </div>
-        {[
-          { name: "Gateway", url: GATEWAY, status: health?.status === "ok" ? "healthy" : "checking", port: "8000", desc: "Auth · A/B routing · Rate limiting" },
-          { name: "Inference", url: "internal", status: "internal", port: "8001", desc: "PTU/PAYG optimizer · Cost tracking · Streaming" },
-          { name: "Prompt Registry", url: "internal", status: "internal", port: "8002", desc: "Semver versioning · Eval gate · Promotion" },
-          { name: "Eval Harness", url: "internal", status: "internal", port: "8003", desc: "CI quality gate · Ragas scoring" },
-        ].map(svc => (
-          <div key={svc.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-            padding: "14px 0", borderBottom: "1px solid var(--border)" }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{svc.name}</div>
-              <div style={{ fontSize: 12, color: "var(--text3)" }}>{svc.desc}</div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 12, color: "var(--text3)" }}>:{svc.port}</span>
-              <Badge color={svc.status === "healthy" ? "green" : svc.status === "internal" ? "gray" : "amber"}>
-                {svc.status === "healthy" ? "✓ healthy" : svc.status === "internal" ? "internal" : "checking"}
-              </Badge>
-            </div>
-          </div>
-        ))}
-      </Card>
-
-      <Card>
-        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Architecture highlights</h3>
-        {[
-          { icon: "🔐", title: "JWT Auth + RBAC", desc: "HS256 tokens with team_id and roles. Premium role required for GPT-4o." },
-          { icon: "🎯", title: "Deterministic A/B routing", desc: "MD5(experiment_id:user_id) → sticky sessions without session storage." },
-          { icon: "💰", title: "PTU → PAYG fallback", desc: "Tries provisioned throughput first, falls back on 429. ~50% cost saving at scale." },
-          { icon: "📊", title: "Per-request cost tracking", desc: "OTel counters per team. Chargeback-ready from day one." },
-          { icon: "🚦", title: "Eval gate CI/CD", desc: "Blocks deploy if prompt relevance score < 0.85. Scores stored in Cosmos DB." },
-          { icon: "⚡", title: "Scale to zero", desc: "Container Apps with minReplicas=0. Costs $0 when idle on Azure for Students." },
-        ].map(item => (
-          <div key={item.title} style={{ display: "flex", gap: 14, padding: "12px 0",
-            borderBottom: "1px solid var(--border)" }}>
-            <span style={{ fontSize: 22 }}>{item.icon}</span>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{item.title}</div>
-              <div style={{ fontSize: 12, color: "var(--text3)", lineHeight: 1.5 }}>{item.desc}</div>
-            </div>
-          </div>
-        ))}
-      </Card>
+function renderOverview(){
+  const hok = state.health?.status==="ok";
+  return `
+  <div class="metrics fade-up">
+    <div class="metric">
+      <div class="metric-label">Gateway</div>
+      <div class="metric-value" style="font-size:16px;color:${hok?'var(--green)':'var(--text3)'}">${hok?'● Online':'● Checking'}</div>
+      <div class="metric-sub">Azure Container Apps</div>
+      <div class="metric-badge">⚡</div>
     </div>
-  );
+    <div class="metric">
+      <div class="metric-label">Requests</div>
+      <div class="metric-value">${state.requests}</div>
+      <div class="metric-sub">this session</div>
+      <div class="metric-badge">📊</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Est. cost</div>
+      <div class="metric-value" style="font-size:18px">$${state.cost.toFixed(5)}</div>
+      <div class="metric-sub">USD this session</div>
+      <div class="metric-badge">💰</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Model</div>
+      <div class="metric-value" style="font-size:15px">gpt-4.1-mini</div>
+      <div class="metric-sub">Azure OpenAI PAYG</div>
+      <div class="metric-badge">🤖</div>
+    </div>
+  </div>
+
+  <div class="section-card fade-up-2">
+    <div class="section-header">
+      <div class="section-title"><span class="icon">🔧</span> Platform services</div>
+      <button class="btn-ghost" style="font-size:12px;padding:6px 12px" onclick="checkHealth()">↻ Refresh</button>
+    </div>
+    <div class="section-body" style="padding:8px 24px">
+      ${[
+        {name:"Gateway",port:"8000",desc:"JWT auth · A/B routing · Rate limiting · CORS",status:hok?"healthy":"checking",color:"green"},
+        {name:"Inference",port:"8001",desc:"PTU→PAYG fallback · Cost tracking · OTel metrics",status:"internal",color:"gray"},
+        {name:"Prompt Registry",port:"8002",desc:"Semver versioning · Eval gate · Cosmos DB",status:"internal",color:"gray"},
+        {name:"Eval Harness",port:"8003",desc:"CI quality gate · Blocks deploy if score < 0.85",status:"internal",color:"gray"},
+      ].map(s=>`
+        <div class="service-row">
+          <div>
+            <div class="service-name">${s.name}</div>
+            <div class="service-desc">${s.desc}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">:${s.port}</span>
+            <span class="badge badge-${s.color}">${s.status==="healthy"?"✓ healthy":s.status==="internal"?"internal":"…"}</span>
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="section-card fade-up-3">
+    <div class="section-header">
+      <div class="section-title"><span class="icon">✦</span> Architecture highlights</div>
+    </div>
+    <div class="section-body">
+      <div class="highlights">
+        ${[
+          {icon:"🔐",t:"JWT Auth + RBAC",d:"HS256 tokens · team_id + roles · Premium gating for GPT-4o"},
+          {icon:"🎯",t:"Deterministic A/B",d:"MD5(experiment:user_id) bucketing · sticky sessions free"},
+          {icon:"💸",t:"PTU → PAYG fallback",d:"Auto-fallback on 429 · ~50% cost saving at scale"},
+          {icon:"📈",t:"Per-request cost tracking",d:"OTel counters · team chargeback · Cosmos DB audit trail"},
+          {icon:"🚦",t:"Eval gate CI/CD",d:"Blocks deploy if relevance < 0.85 · GitHub Actions pipeline"},
+          {icon:"⚡",t:"Scale to zero",d:"Container Apps minReplicas=0 · $0 cost when idle"},
+        ].map(h=>`
+          <div class="highlight">
+            <div class="highlight-icon">${h.icon}</div>
+            <div>
+              <div class="highlight-title">${h.t}</div>
+              <div class="highlight-desc">${h.d}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
 }
 
-// ── API KEYS INFO ─────────────────────────────────────────────────────────────
-function ApiTab({ token }) {
-  const [copied, setCopied] = useState(false);
+// ── CHAT ──────────────────────────────────────────────────────────────────────
+function renderChat(){
+  const models = ["gpt-4o-mini","gpt-4o","gpt-35-turbo"];
+  return `
+  <div class="fade-up" style="display:flex;flex-direction:column;height:calc(100vh - 160px)">
+    <div class="section-card" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div class="section-header">
+        <div class="section-title"><span class="icon">💬</span> Chat</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${models.map(m=>`<button class="model-pill ${state.model===m?'active':''}" onclick="setModel('${m}')">${m}</button>`).join('')}
+          <button class="btn-ghost" style="font-size:12px;padding:6px 12px;margin-left:4px" onclick="clearChat()">Clear</button>
+        </div>
+      </div>
+      <div class="section-body" style="flex:1;overflow-y:auto;padding:20px" id="chat-area">
+        ${state.messages.length===0?`
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3)">
+            <div style="font-size:36px;opacity:.3">💬</div>
+            <div style="font-size:14px">Send a message to test your live Azure deployment</div>
+            <div style="font-family:var(--mono);font-size:11px">Model: ${state.model} · Endpoint: Azure Container Apps</div>
+          </div>`:
+          state.messages.map(m=>`
+            <div class="msg-wrap ${m.role}" style="margin-bottom:12px">
+              <div class="bubble ${m.role}">${escHtml(m.content)}</div>
+            </div>`).join('')
+        }
+        ${state.loading?`<div style="margin-bottom:12px"><div class="typing"><span></span><span></span><span></span></div></div>`:''}
+      </div>
+      <div style="padding:16px 20px;border-top:1px solid var(--border)">
+        ${state.stats?`<div class="chat-meta" style="margin-bottom:10px">
+          <span>⚡ ${state.stats.total_tokens} tokens</span>
+          <span>💰 $${((state.stats.prompt_tokens*0.00015+state.stats.completion_tokens*0.0006)/1000).toFixed(6)}</span>
+          <span>🤖 ${state.stats.model||state.model}</span>
+          <span>⏱ ${state.stats.latency||''}ms</span>
+        </div>`:''}
+        <div class="chat-input-row">
+          <input id="chat-in" placeholder="Message — press Enter to send" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"/>
+          <button class="btn-primary" onclick="sendChat()" style="white-space:nowrap;padding:10px 20px" ${state.loading?'disabled':''}>Send ↑</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
 
-  function copy(text) {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+function escHtml(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") }
+
+function setModel(m){ state.model=m; renderTab(); setTimeout(()=>{ const i=$("chat-in"); if(i)i.focus(); },50) }
+function clearChat(){ state.messages=[]; state.stats=null; renderTab(); }
+
+async function sendChat(){
+  const inp=$("chat-in");
+  const msg=inp?.value?.trim();
+  if(!msg||state.loading)return;
+  state.messages.push({role:"user",content:msg});
+  inp.value="";
+  state.loading=true;
+  renderTab();
+  scrollChatBottom();
+  try{
+    const history=state.messages.map(m=>({role:m.role,content:m.content}));
+    const r=await fetch(`${GATEWAY}/v1/chat/completions`,{
+      method:"POST",
+      headers:{Authorization:`Bearer ${state.token}`,"Content-Type":"application/json"},
+      body:JSON.stringify({messages:history,model:state.model})
+    });
+    const d=await r.json();
+    if(d.choices?.[0]?.message){
+      state.messages.push(d.choices[0].message);
+      state.stats={...d.usage,model:d.model,latency:d.usage?.latency_checkpoint?.total_duration_ms||''};
+      state.requests++;
+      const pt=d.usage?.prompt_tokens||0, ct=d.usage?.completion_tokens||0;
+      state.cost+=(pt*0.00015+ct*0.0006)/1000;
+    }else{
+      state.messages.push({role:"error",content:JSON.stringify(d.detail||d)});
+    }
+  }catch(e){
+    state.messages.push({role:"error",content:"Request failed: "+e.message});
   }
+  state.loading=false;
+  renderTab();
+  scrollChatBottom();
+}
 
-  const curlExample = `curl -X POST \\
-  '${GATEWAY}/auth/token' \\
+function scrollChatBottom(){
+  setTimeout(()=>{ const a=$("chat-area"); if(a)a.scrollTop=a.scrollHeight; },50);
+}
+
+// ── API DOCS ──────────────────────────────────────────────────────────────────
+function renderApi(){
+  return `
+  <div class="fade-up" style="display:flex;flex-direction:column;gap:16px">
+    <div class="section-card">
+      <div class="section-header"><div class="section-title"><span class="icon">🌐</span> Base URL</div></div>
+      <div class="section-body">
+        <div style="display:flex;gap:8px;align-items:center">
+          <code style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--accent2);word-break:break-all">${GATEWAY}</code>
+          <button class="btn-ghost" style="white-space:nowrap;font-size:12px" onclick="copy('${GATEWAY}',this)">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><div class="section-title"><span class="icon">📋</span> Endpoints</div></div>
+      <div class="section-body" style="padding:8px 24px">
+        ${[
+          {method:"POST",path:"/auth/token",desc:"Exchange API key for JWT token",auth:false},
+          {method:"GET", path:"/health",    desc:"Service health check",auth:false},
+          {method:"GET", path:"/",          desc:"Platform info",auth:false},
+          {method:"GET", path:"/docs",      desc:"Swagger UI",auth:false},
+          {method:"POST",path:"/v1/chat/completions",desc:"Chat completions (OpenAI-compatible)",auth:true},
+        ].map(e=>`
+          <div class="ep-row">
+            <div class="ep-left">
+              <span class="method method-${e.method.toLowerCase()}">${e.method}</span>
+              <code class="ep-path">${e.path}</code>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="ep-desc">${e.desc}</span>
+              ${e.auth?`<span class="badge badge-amber">🔒 JWT</span>`:`<span class="badge badge-gray">public</span>`}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-header"><div class="section-title"><span class="icon">🔑</span> Get a token</div></div>
+      <div class="section-body">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:10px">Step 1 — Exchange your API key for a 24-hour JWT</div>
+        <div class="code-block">curl -X POST '${GATEWAY}/auth/token' \\
   -H 'Content-Type: application/json' \\
-  -d '{"username":"user_001","team_id":"team_acme","roles":["premium"],"api_key":"llm-platform-key-2024"}'`;
+  -d '{
+    "username": "user_001",
+    "team_id":  "team_acme",
+    "roles":    ["premium"],
+    "api_key":  "llm-platform-key-2024"
+  }'</div>
+      </div>
+    </div>
 
-  const chatExample = `curl -X POST \\
-  '${GATEWAY}/v1/chat/completions' \\
+    <div class="section-card">
+      <div class="section-header"><div class="section-title"><span class="icon">💬</span> Send a message</div></div>
+      <div class="section-body">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:10px">Step 2 — Use the token in Authorization header</div>
+        <div class="code-block">curl -X POST '${GATEWAY}/v1/chat/completions' \\
   -H 'Authorization: Bearer YOUR_TOKEN' \\
   -H 'Content-Type: application/json' \\
-  -d '{"messages":[{"role":"user","content":"Hello!"}],"model":"gpt-4o-mini"}'`;
+  -d '{
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "model": "gpt-4o-mini"
+  }'</div>
+      </div>
+    </div>
 
-  const pythonExample = `import requests
+    <div class="section-card">
+      <div class="section-header"><div class="section-title"><span class="icon">🐍</span> Python</div></div>
+      <div class="section-body">
+        <div class="code-block">import requests
 
-# Step 1: Get token
-token_resp = requests.post("${GATEWAY}/auth/token", json={
-    "username": "user_001",
-    "team_id": "team_acme", 
-    "roles": ["premium"],
-    "api_key": "llm-platform-key-2024"
+r = requests.post("${GATEWAY}/auth/token", json={
+    "username": "user_001", "team_id": "team_acme",
+    "roles": ["premium"], "api_key": "llm-platform-key-2024"
 })
-token = token_resp.json()["access_token"]
+token = r.json()["access_token"]
 
-# Step 2: Chat
 resp = requests.post("${GATEWAY}/v1/chat/completions",
     headers={"Authorization": f"Bearer {token}"},
-    json={"messages": [{"role": "user", "content": "Hello!"}], "model": "gpt-4o-mini"}
+    json={"messages": [{"role": "user", "content": "Hello!"}],
+          "model": "gpt-4o-mini"}
 )
-print(resp.json()["choices"][0]["message"]["content"])`;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <Card>
-        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Base URL</h3>
-        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>All requests go through the gateway</div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <code style={{ background: "var(--bg3)", padding: "10px 14px", borderRadius: 8, fontSize: 13,
-            color: "var(--blue)", flex: 1, wordBreak: "break-all" }}>{GATEWAY}</code>
-          <button className="btn-secondary" onClick={() => copy(GATEWAY)} style={{ whiteSpace: "nowrap" }}>
-            {copied ? "Copied!" : "Copy"}
-          </button>
-        </div>
-      </Card>
-
-      <Card>
-        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Step 1 — Get a token</h3>
-        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>Exchange your API key for a 24h JWT</div>
-        <pre style={{ background: "var(--bg3)", padding: 16, borderRadius: 8, fontSize: 12,
-          color: "var(--text2)", overflowX: "auto", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-          {curlExample}
-        </pre>
-      </Card>
-
-      <Card>
-        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Step 2 — Call the API</h3>
-        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>Use the token in the Authorization header</div>
-        <pre style={{ background: "var(--bg3)", padding: 16, borderRadius: 8, fontSize: 12,
-          color: "var(--text2)", overflowX: "auto", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-          {chatExample}
-        </pre>
-      </Card>
-
-      <Card>
-        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Python example</h3>
-        <pre style={{ background: "var(--bg3)", padding: 16, borderRadius: 8, fontSize: 12,
-          color: "var(--text2)", overflowX: "auto", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-          {pythonExample}
-        </pre>
-      </Card>
-
-      <Card>
-        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Endpoints</h3>
-        {[
-          { method: "POST", path: "/auth/token", desc: "Get a JWT token", auth: false },
-          { method: "GET",  path: "/health",     desc: "Service health check", auth: false },
-          { method: "GET",  path: "/",           desc: "Platform info", auth: false },
-          { method: "POST", path: "/v1/chat/completions", desc: "Chat completions (OpenAI-compatible)", auth: true },
-        ].map(ep => (
-          <div key={ep.path} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-            padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <Badge color={ep.method === "POST" ? "green" : "blue"}>{ep.method}</Badge>
-              <code style={{ fontSize: 13 }}>{ep.path}</code>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: "var(--text3)" }}>{ep.desc}</span>
-              {ep.auth && <Badge color="amber">🔒 JWT</Badge>}
-            </div>
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
-}
-
-// ── MAIN APP ──────────────────────────────────────────────────────────────────
-function App() {
-  const [token, setToken]       = useState(null);
-  const [username, setUsername] = useState("");
-  const [teamId, setTeamId]     = useState("");
-  const [tab, setTab]           = useState("overview");
-
-  function handleLogin(t, u, team) { setToken(t); setUsername(u); setTeamId(team); }
-  function logout() { setToken(null); setUsername(""); setTeamId(""); }
-
-  if (!token) return <LoginScreen onLogin={handleLogin} />;
-
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "chat",     label: "Chat" },
-    { id: "api",      label: "API Docs" },
-  ];
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      {/* Header */}
-      <div style={{ background: "var(--bg2)", borderBottom: "1px solid var(--border)",
-        padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between",
-        height: 56, position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 20 }}>⚡</span>
-            <span style={{ fontWeight: 700, fontSize: 15 }}>LLM Platform</span>
-            <Badge color="green">Live</Badge>
-          </div>
-          <nav style={{ display: "flex", gap: 4 }}>
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                style={{ background: tab === t.id ? "var(--bg3)" : "none",
-                  color: tab === t.id ? "var(--text)" : "var(--text3)",
-                  border: "1px solid " + (tab === t.id ? "var(--border)" : "transparent"),
-                  borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: tab === t.id ? 500 : 400 }}>
-                {t.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, color: "var(--text3)" }}>{username} · {teamId}</span>
-          <button className="btn-secondary" onClick={logout} style={{ fontSize: 12, padding: "6px 12px" }}>Sign out</button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, padding: "24px", maxWidth: 900, margin: "0 auto", width: "100%" }}>
-        {tab === "overview" && <OverviewTab token={token} username={username} teamId={teamId} />}
-        {tab === "chat"     && <ChatTab token={token} />}
-        {tab === "api"      && <ApiTab token={token} />}
+print(resp.json()["choices"][0]["message"]["content"])</div>
       </div>
     </div>
-  );
+  </div>`;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-  </script>
+function copy(text, btn){
+  navigator.clipboard.writeText(text);
+  const orig=btn.textContent; btn.textContent="Copied!";
+  setTimeout(()=>btn.textContent=orig,1500);
+}
+
+// ── HEALTH ────────────────────────────────────────────────────────────────────
+async function checkHealth(){
+  try{
+    const r=await fetch(`${GATEWAY}/health`,{signal:AbortSignal.timeout(4000)});
+    state.health=await r.json();
+  }catch(e){ state.health={status:"error"} }
+  const ok=state.health?.status==="ok";
+  const dot=$("status-dot"); const txt=$("status-text");
+  if(dot){ dot.style.background=ok?"var(--green)":"var(--red)"; dot.style.boxShadow=ok?"0 0 8px var(--green)":"0 0 8px var(--red)" }
+  if(txt) txt.textContent=ok?"online":"offline";
+  if(state.tab==="overview") renderTab();
+}
+
+function attachHandlers(){}
+
+render();
+</script>
 </body>
 </html>
