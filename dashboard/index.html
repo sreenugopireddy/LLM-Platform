@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Platform Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;
+      --border:#2a2d3e;--text:#e8eaf6;--text2:#9fa3c0;--text3:#6b7099;
+      --blue:#4f8ef7;--green:#4caf82;--amber:#f0a832;--red:#e05555;
+      --purple:#9c6cff;
+    }
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+    button{cursor:pointer;border:none;border-radius:8px;font-size:13px;padding:8px 16px;transition:opacity .15s}
+    button:hover{opacity:.85}
+    input,select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 12px;outline:none;width:100%}
+    input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+    .btn-primary{background:var(--blue);color:#fff}
+    .btn-secondary{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+    .btn-green{background:var(--green);color:#fff}
+    .btn-danger{background:var(--red);color:#fff}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const GATEWAY = "https://llm-platform-gateway.greentree-67d78498.eastus.azurecontainerapps.io";
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+const api = {
+  async getToken(username, teamId, roles, apiKey) {
+    const r = await fetch(`${GATEWAY}/auth/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, team_id: teamId, roles, api_key: apiKey }),
+    });
+    return r.json();
+  },
+  async chat(token, messages, model) {
+    const r = await fetch(`${GATEWAY}/v1/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messages, model }),
+    });
+    return r.json();
+  },
+  async health() {
+    const r = await fetch(`${GATEWAY}/health`);
+    return r.json();
+  },
+};
+
+// ── Components ────────────────────────────────────────────────────────────────
+
+function Badge({ color, children }) {
+  const colors = {
+    green: { bg: "#1a2e22", color: "#4caf82" },
+    red:   { bg: "#2e1a1a", color: "#e05555" },
+    blue:  { bg: "#1a2038", color: "#4f8ef7" },
+    amber: { bg: "#2e2510", color: "#f0a832" },
+    gray:  { bg: "#1e2030", color: "#9fa3c0" },
+  };
+  const s = colors[color] || colors.gray;
+  return (
+    <span style={{ background: s.bg, color: s.color, fontSize: 11, fontWeight: 600,
+      padding: "2px 8px", borderRadius: 6, whiteSpace: "nowrap" }}>
+      {children}
+    </span>
+  );
+}
+
+function Card({ children, style }) {
+  return (
+    <div style={{ background: "var(--bg2)", border: "1px solid var(--border)",
+      borderRadius: 12, padding: "20px", ...style }}>
+      {children}
+    </div>
+  );
+}
+
+function MetricCard({ label, value, sub, color }) {
+  return (
+    <div style={{ background: "var(--bg2)", border: "1px solid var(--border)",
+      borderRadius: 12, padding: "16px 20px" }}>
+      <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 600, color: color || "var(--text)" }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4 }}>{sub}</div>}
+    </div>
+  );
+}
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [form, setForm] = useState({ username: "user_001", teamId: "team_acme", apiKey: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const roles = ["premium"];
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    setLoading(true); setError("");
+    try {
+      const data = await api.getToken(form.username, form.teamId, roles, form.apiKey);
+      if (data.access_token) {
+        onLogin(data.access_token, form.username, form.teamId);
+      } else {
+        setError(data.detail?.error || "Invalid API key");
+      }
+    } catch (e) {
+      setError("Connection failed — is the gateway running?");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>⚡</div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>LLM Platform</h1>
+          <p style={{ color: "var(--text2)", fontSize: 14 }}>Sign in to access the platform</p>
+        </div>
+        <Card>
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>USERNAME</label>
+              <input value={form.username} onChange={e => setForm(f => ({...f, username: e.target.value}))} placeholder="user_001" required />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>TEAM ID</label>
+              <input value={form.teamId} onChange={e => setForm(f => ({...f, teamId: e.target.value}))} placeholder="team_acme" required />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: "var(--text3)", display: "block", marginBottom: 6 }}>PLATFORM API KEY</label>
+              <input type="password" value={form.apiKey} onChange={e => setForm(f => ({...f, apiKey: e.target.value}))} placeholder="Your platform API key" required />
+            </div>
+            {error && <div style={{ background: "#2e1a1a", color: "var(--red)", fontSize: 13, padding: "10px 14px", borderRadius: 8 }}>{error}</div>}
+            <button className="btn-primary" type="submit" disabled={loading} style={{ padding: "12px", fontSize: 15, marginTop: 4 }}>
+              {loading ? "Signing in..." : "Sign in →"}
+            </button>
+          </form>
+          <div style={{ marginTop: 20, padding: "14px", background: "var(--bg3)", borderRadius: 8 }}>
+            <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 6 }}>Default API key (set in Azure):</div>
+            <code style={{ fontSize: 12, color: "var(--amber)" }}>llm-platform-key-2024</code>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── CHAT ──────────────────────────────────────────────────────────────────────
+function ChatTab({ token }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [model, setModel] = useState("gpt-4o-mini");
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState(null);
+  const bottomRef = useRef(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  async function send() {
+    if (!input.trim() || loading) return;
+    const userMsg = { role: "user", content: input };
+    setMessages(m => [...m, userMsg]);
+    setInput("");
+    setLoading(true);
+    try {
+      const history = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }));
+      const data = await api.chat(token, history, model);
+      if (data.choices?.[0]?.message) {
+        setMessages(m => [...m, data.choices[0].message]);
+        setStats(data.usage);
+      } else {
+        setMessages(m => [...m, { role: "error", content: JSON.stringify(data.detail || data) }]);
+      }
+    } catch (e) {
+      setMessages(m => [...m, { role: "error", content: e.message }]);
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 180px)", gap: 16 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <select value={model} onChange={e => setModel(e.target.value)} style={{ width: "auto" }}>
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+          <option value="gpt-4o">gpt-4o</option>
+          <option value="gpt-35-turbo">gpt-35-turbo</option>
+        </select>
+        <button className="btn-secondary" onClick={() => setMessages([])} style={{ whiteSpace: "nowrap" }}>Clear chat</button>
+        {stats && (
+          <span style={{ fontSize: 12, color: "var(--text3)" }}>
+            {stats.total_tokens} tokens · ~${((stats.prompt_tokens * 0.00015 + stats.completion_tokens * 0.0006) / 1000).toFixed(6)}
+          </span>
+        )}
+      </div>
+
+      <Card style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12, padding: "20px" }}>
+        {messages.length === 0 && (
+          <div style={{ textAlign: "center", color: "var(--text3)", marginTop: "auto", marginBottom: "auto" }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>💬</div>
+            <div style={{ fontSize: 14 }}>Start a conversation with your deployed LLM platform</div>
+            <div style={{ fontSize: 12, marginTop: 8, color: "var(--text3)" }}>Model: {model} · Gateway: Azure Container Apps</div>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} style={{
+            display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start"
+          }}>
+            <div style={{
+              maxWidth: "75%", padding: "12px 16px", borderRadius: 12, fontSize: 14, lineHeight: 1.6,
+              background: m.role === "user" ? "var(--blue)" : m.role === "error" ? "#2e1a1a" : "var(--bg3)",
+              color: m.role === "error" ? "var(--red)" : "var(--text)",
+              borderBottomRightRadius: m.role === "user" ? 4 : 12,
+              borderBottomLeftRadius: m.role === "assistant" ? 4 : 12,
+            }}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex" }}>
+            <div style={{ background: "var(--bg3)", padding: "12px 16px", borderRadius: 12, fontSize: 13, color: "var(--text3)" }}>
+              Thinking...
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </Card>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
+          placeholder="Type a message and press Enter..." />
+        <button className="btn-primary" onClick={send} disabled={loading} style={{ whiteSpace: "nowrap", padding: "8px 20px" }}>
+          Send ↑
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────────────────────────
+function OverviewTab({ token, username, teamId }) {
+  const [health, setHealth] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function refresh() {
+    setLoading(true);
+    try { const h = await api.health(); setHealth(h); } catch(e) { setHealth({ status: "error" }); }
+    setLoading(false);
+  }
+
+  useEffect(() => { refresh(); }, []);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+        <MetricCard label="Gateway" value={health?.status === "ok" ? "● Online" : "● Offline"}
+          color={health?.status === "ok" ? "var(--green)" : "var(--red)"}
+          sub="Azure Container Apps" />
+        <MetricCard label="Signed in as" value={username} sub={`Team: ${teamId}`} color="var(--blue)" />
+        <MetricCard label="Model" value="gpt-4.1-mini" sub="Azure OpenAI PAYG" color="var(--purple)" />
+        <MetricCard label="Auth" value="JWT HS256" sub="24h token · RBAC enabled" />
+      </div>
+
+      <Card>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600 }}>Platform services</h3>
+          <button className="btn-secondary" onClick={refresh} style={{ fontSize: 12 }}>
+            {loading ? "Checking..." : "↻ Refresh"}
+          </button>
+        </div>
+        {[
+          { name: "Gateway", url: GATEWAY, status: health?.status === "ok" ? "healthy" : "checking", port: "8000", desc: "Auth · A/B routing · Rate limiting" },
+          { name: "Inference", url: "internal", status: "internal", port: "8001", desc: "PTU/PAYG optimizer · Cost tracking · Streaming" },
+          { name: "Prompt Registry", url: "internal", status: "internal", port: "8002", desc: "Semver versioning · Eval gate · Promotion" },
+          { name: "Eval Harness", url: "internal", status: "internal", port: "8003", desc: "CI quality gate · Ragas scoring" },
+        ].map(svc => (
+          <div key={svc.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+            padding: "14px 0", borderBottom: "1px solid var(--border)" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{svc.name}</div>
+              <div style={{ fontSize: 12, color: "var(--text3)" }}>{svc.desc}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 12, color: "var(--text3)" }}>:{svc.port}</span>
+              <Badge color={svc.status === "healthy" ? "green" : svc.status === "internal" ? "gray" : "amber"}>
+                {svc.status === "healthy" ? "✓ healthy" : svc.status === "internal" ? "internal" : "checking"}
+              </Badge>
+            </div>
+          </div>
+        ))}
+      </Card>
+
+      <Card>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Architecture highlights</h3>
+        {[
+          { icon: "🔐", title: "JWT Auth + RBAC", desc: "HS256 tokens with team_id and roles. Premium role required for GPT-4o." },
+          { icon: "🎯", title: "Deterministic A/B routing", desc: "MD5(experiment_id:user_id) → sticky sessions without session storage." },
+          { icon: "💰", title: "PTU → PAYG fallback", desc: "Tries provisioned throughput first, falls back on 429. ~50% cost saving at scale." },
+          { icon: "📊", title: "Per-request cost tracking", desc: "OTel counters per team. Chargeback-ready from day one." },
+          { icon: "🚦", title: "Eval gate CI/CD", desc: "Blocks deploy if prompt relevance score < 0.85. Scores stored in Cosmos DB." },
+          { icon: "⚡", title: "Scale to zero", desc: "Container Apps with minReplicas=0. Costs $0 when idle on Azure for Students." },
+        ].map(item => (
+          <div key={item.title} style={{ display: "flex", gap: 14, padding: "12px 0",
+            borderBottom: "1px solid var(--border)" }}>
+            <span style={{ fontSize: 22 }}>{item.icon}</span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{item.title}</div>
+              <div style={{ fontSize: 12, color: "var(--text3)", lineHeight: 1.5 }}>{item.desc}</div>
+            </div>
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+// ── API KEYS INFO ─────────────────────────────────────────────────────────────
+function ApiTab({ token }) {
+  const [copied, setCopied] = useState(false);
+
+  function copy(text) {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  const curlExample = `curl -X POST \\
+  '${GATEWAY}/auth/token' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"username":"user_001","team_id":"team_acme","roles":["premium"],"api_key":"llm-platform-key-2024"}'`;
+
+  const chatExample = `curl -X POST \\
+  '${GATEWAY}/v1/chat/completions' \\
+  -H 'Authorization: Bearer YOUR_TOKEN' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"messages":[{"role":"user","content":"Hello!"}],"model":"gpt-4o-mini"}'`;
+
+  const pythonExample = `import requests
+
+# Step 1: Get token
+token_resp = requests.post("${GATEWAY}/auth/token", json={
+    "username": "user_001",
+    "team_id": "team_acme", 
+    "roles": ["premium"],
+    "api_key": "llm-platform-key-2024"
+})
+token = token_resp.json()["access_token"]
+
+# Step 2: Chat
+resp = requests.post("${GATEWAY}/v1/chat/completions",
+    headers={"Authorization": f"Bearer {token}"},
+    json={"messages": [{"role": "user", "content": "Hello!"}], "model": "gpt-4o-mini"}
+)
+print(resp.json()["choices"][0]["message"]["content"])`;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Card>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Base URL</h3>
+        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>All requests go through the gateway</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <code style={{ background: "var(--bg3)", padding: "10px 14px", borderRadius: 8, fontSize: 13,
+            color: "var(--blue)", flex: 1, wordBreak: "break-all" }}>{GATEWAY}</code>
+          <button className="btn-secondary" onClick={() => copy(GATEWAY)} style={{ whiteSpace: "nowrap" }}>
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+      </Card>
+
+      <Card>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Step 1 — Get a token</h3>
+        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>Exchange your API key for a 24h JWT</div>
+        <pre style={{ background: "var(--bg3)", padding: 16, borderRadius: 8, fontSize: 12,
+          color: "var(--text2)", overflowX: "auto", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+          {curlExample}
+        </pre>
+      </Card>
+
+      <Card>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Step 2 — Call the API</h3>
+        <div style={{ fontSize: 12, color: "var(--text3)", marginBottom: 12 }}>Use the token in the Authorization header</div>
+        <pre style={{ background: "var(--bg3)", padding: 16, borderRadius: 8, fontSize: 12,
+          color: "var(--text2)", overflowX: "auto", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+          {chatExample}
+        </pre>
+      </Card>
+
+      <Card>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Python example</h3>
+        <pre style={{ background: "var(--bg3)", padding: 16, borderRadius: 8, fontSize: 12,
+          color: "var(--text2)", overflowX: "auto", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+          {pythonExample}
+        </pre>
+      </Card>
+
+      <Card>
+        <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Endpoints</h3>
+        {[
+          { method: "POST", path: "/auth/token", desc: "Get a JWT token", auth: false },
+          { method: "GET",  path: "/health",     desc: "Service health check", auth: false },
+          { method: "GET",  path: "/",           desc: "Platform info", auth: false },
+          { method: "POST", path: "/v1/chat/completions", desc: "Chat completions (OpenAI-compatible)", auth: true },
+        ].map(ep => (
+          <div key={ep.path} style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+            padding: "12px 0", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <Badge color={ep.method === "POST" ? "green" : "blue"}>{ep.method}</Badge>
+              <code style={{ fontSize: 13 }}>{ep.path}</code>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: "var(--text3)" }}>{ep.desc}</span>
+              {ep.auth && <Badge color="amber">🔒 JWT</Badge>}
+            </div>
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────────────────────────────────────
+function App() {
+  const [token, setToken]       = useState(null);
+  const [username, setUsername] = useState("");
+  const [teamId, setTeamId]     = useState("");
+  const [tab, setTab]           = useState("overview");
+
+  function handleLogin(t, u, team) { setToken(t); setUsername(u); setTeamId(team); }
+  function logout() { setToken(null); setUsername(""); setTeamId(""); }
+
+  if (!token) return <LoginScreen onLogin={handleLogin} />;
+
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "chat",     label: "Chat" },
+    { id: "api",      label: "API Docs" },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      {/* Header */}
+      <div style={{ background: "var(--bg2)", borderBottom: "1px solid var(--border)",
+        padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        height: 56, position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 20 }}>⚡</span>
+            <span style={{ fontWeight: 700, fontSize: 15 }}>LLM Platform</span>
+            <Badge color="green">Live</Badge>
+          </div>
+          <nav style={{ display: "flex", gap: 4 }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                style={{ background: tab === t.id ? "var(--bg3)" : "none",
+                  color: tab === t.id ? "var(--text)" : "var(--text3)",
+                  border: "1px solid " + (tab === t.id ? "var(--border)" : "transparent"),
+                  borderRadius: 8, padding: "6px 14px", fontSize: 13, fontWeight: tab === t.id ? 500 : 400 }}>
+                {t.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 13, color: "var(--text3)" }}>{username} · {teamId}</span>
+          <button className="btn-secondary" onClick={logout} style={{ fontSize: 12, padding: "6px 12px" }}>Sign out</button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, padding: "24px", maxWidth: 900, margin: "0 auto", width: "100%" }}>
+        {tab === "overview" && <OverviewTab token={token} username={username} teamId={teamId} />}
+        {tab === "chat"     && <ChatTab token={token} />}
+        {tab === "api"      && <ApiTab token={token} />}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
